@@ -1,11 +1,11 @@
 library(shiny)
 
-drugnames_unsorted <- read.table(paste0("results_memory.txt"),
+drugnames_unsorted <- read.table(paste0("data/results_memory.txt"),
         stringsAsFactors = F,
         sep = "\t",
         h = T)[,"results.drug"]
 
-data <- read.table(paste0("results_memory_sorted.txt"),
+data <- read.table(paste0("data/results_memory_sorted.txt"),
         stringsAsFactors = F,
         sep = "\t",
         h = T)
@@ -15,14 +15,14 @@ p_crit <- 0.05/(nrow(data)*12)
 
 all_drugs <- unique(data$results.drug)
 
-load("assignments_list.RData")
-load("drugbank_list_processedList.RData")
+load("data/assignments_list.RData")
+load("data/drugbank_list_processedList.RData")
 
 shinyServer(function(input, output, session) {
 
     newData_allCases <- reactive({
         #-------------------------- Read in sorted data for all cases
-        read.table(paste0("results_",
+        read.table(paste0("data/results_",
                 input$result_name,"_sorted.txt"),
             stringsAsFactors = F,
             sep = "\t",
@@ -42,12 +42,12 @@ shinyServer(function(input, output, session) {
     })
     
     newIndication_list <- reactive({
-        load(paste0("result_lists_",input$result_name,".RData"))
+        load(paste0("data/result_lists_",input$result_name,".RData"))
         indication_list
     })
     
     newIndication_drug_list <- reactive({
-        load(paste0("result_lists_",input$result_name,".RData"))
+        load(paste0("data/result_lists_",input$result_name,".RData"))
 
         names(indication_drug_list) <- drugnames_unsorted
         indication_drug_list
@@ -446,12 +446,12 @@ shinyServer(function(input, output, session) {
     output$infoDrug <- renderTable({
         if(input$drug %in% names(info_list)){
             use_name <- input$drug
-            df_use <- info_list[[use_name]]
+            df_use <- info_list[[use_name]]$targets
             df_use[,names(df_use) != "go_classifiers"]
         }else if(any(names(assignments_list[[input$drug]]) %in% names(info_list))){
             name_ind <- names(assignments_list[[input$drug]]) %in% names(info_list)
             use_name <- names(assignments_list[[input$drug]])[name_ind]
-            df_use <- info_list[[use_name]]
+            df_use <- info_list[[use_name]]$targets
             df_use[,names(df_use) != "go_classifiers"]
         }else{
             data.frame(name = "",
@@ -464,15 +464,57 @@ shinyServer(function(input, output, session) {
         }
     })
     
+    output$infoDrugDescription <- renderUI({
+        if(input$drug %in% names(info_list)){
+            use_name <- input$drug
+            text_print <- info_list[[use_name]]$description
+        }else if(any(names(assignments_list[[input$drug]]) %in% names(info_list))){
+            name_ind <- names(assignments_list[[input$drug]]) %in% names(info_list)
+            use_name <- names(assignments_list[[input$drug]])[name_ind]
+            text_print <- info_list[[use_name]]$description
+        }else{
+            text_print <- ""
+            HTML(text_print)
+        }
+    })
+    
+    output$infoDrugPharmacodynamic <- renderUI({
+        if(input$drug %in% names(info_list)){
+            use_name <- input$drug
+            text_print <- info_list[[use_name]]$pharmacodynamic
+        }else if(any(names(assignments_list[[input$drug]]) %in% names(info_list))){
+            name_ind <- names(assignments_list[[input$drug]]) %in% names(info_list)
+            use_name <- names(assignments_list[[input$drug]])[name_ind]
+            text_print <- info_list[[use_name]]$pharmacodynamic
+        }else{
+            text_print <- ""
+            HTML(text_print)
+        }
+    })
+    
+    output$infoDrugIndication <- renderUI({
+        if(input$drug %in% names(info_list)){
+            use_name <- input$drug
+            text_print <- info_list[[use_name]]$indication
+        }else if(any(names(assignments_list[[input$drug]]) %in% names(info_list))){
+            name_ind <- names(assignments_list[[input$drug]]) %in% names(info_list)
+            use_name <- names(assignments_list[[input$drug]])[name_ind]
+            text_print <- info_list[[use_name]]$indication
+        }else{
+            text_print <- ""
+            HTML(text_print)
+        }
+    })
+    
     output$GOannot <- renderDataTable({
         if(input$drug %in% names(info_list)){
             use_name <- input$drug
-            df_use <- info_list[[use_name]]
+            df_use <- info_list[[use_name]]$targets
             data.frame(annotation = strsplit(df_use$go_classifiers, "; ",fixed = T)[[1]], stringsAsFactors = F)
         }else if(any(names(assignments_list[[input$drug]]) %in% names(info_list))){
             name_ind <- names(assignments_list[[input$drug]]) %in% names(info_list)
             use_name <- names(assignments_list[[input$drug]])[name_ind]
-            df_use <- info_list[[use_name]]
+            df_use <- info_list[[use_name]]$targets
             data.frame(annotation = strsplit(df_use$go_classifiers, "; ",fixed = T)[[1]], stringsAsFactors = F)
         }else{
             data.frame(annotation = "",

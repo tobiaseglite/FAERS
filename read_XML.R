@@ -1,18 +1,17 @@
 require(XML)
-data <- xmlParse("/Users/tegli/Downloads/full_database.xml")
-xml_data <- xmlToList(data)
+#data <- xmlParse("/Users/tegli/Downloads/full_database.xml")
+#xml_data <- xmlToList(data)
+#
+#save(xml_data, file = "/Users/tegli/Desktop/FAERS/drugbank_list.RData")
 
-save(xml_data, file = "/Users/tegli/Desktop/FAERS/drugbank_list.RData")
-length(xml_data[[1]])
-str(xml_data[[1]])
-names(xml_data[[1]][[1]])
-
-names(xml_data) <- all_names
-save(xml_data, file = "/Users/tegli/Desktop/FAERS/drugbank_list_named.RData")
+load("/Users/tegli/Desktop/FAERS/data/drugbank_list.RData")
 
 all_names <- tolower(unname(sapply(xml_data[-length(xml_data)],function(x){
     x[["name"]]
 }, USE.NAMES = F)))
+
+names(xml_data) <- all_names
+save(xml_data, file = "/Users/tegli/Desktop/FAERS/data/drugbank_list_named.RData")
 
 all_descriptions <- sapply(xml_data[-length(xml_data)],function(x){
     x[["description"]]
@@ -27,8 +26,14 @@ all_pharmacodynamics <- sapply(xml_data[-length(xml_data)],function(x){
 }, USE.NAMES = F)
 
 
-info_list <- lapply(xml_data[-length(xml_data)],function(x){
-    targets_list <- lapply(x[["targets"]],function(y){
+info_list <- lapply(1:(length(xml_data)-1),function(x){
+    
+    data_tmp <- xml_data[[x]]
+    description_tmp <- all_descriptions[[x]]
+    indication_tmp <- all_indications[[x]]
+    pharmacodynamic_tmp <- all_pharmacodynamics[[x]]
+    
+    targets_list <- lapply(data_tmp[["targets"]],function(y){
         
         if(!is.null(y$polypeptide$`go-classifiers`)){
             go_classifiers <- sort(unname(sapply(y$polypeptide$`go-classifiers`,function(go_tmp){
@@ -62,7 +67,14 @@ info_list <- lapply(xml_data[-length(xml_data)],function(x){
             go_classifiers = paste(go_classifiers, collapse = "; "),
             stringsAsFactors = F)
     })
-    do.call("rbind",targets_list)
+    df_tmp <- do.call("rbind",targets_list)
+    
+    return(list(description = description_tmp,
+        indication = indication_tmp,
+        pharmacodynamic = pharmacodynamic_tmp,
+        targets = df_tmp))
 })
 
-save(info_list, file = "/Users/tegli/Desktop/FAERS/drugbank_list_processedList.RData")
+names(info_list) <- all_names
+
+save(info_list, file = "/Users/tegli/Desktop/FAERS/data/drugbank_list_processedList.RData")

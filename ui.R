@@ -1,7 +1,7 @@
 library(shiny)
 library(shinydashboard)
 
-data <- read.table(paste0("results_memory_sorted.txt"),
+data <- read.table(paste0("data/results_memory_sorted.txt"),
         stringsAsFactors = F,
         sep = "\t",
         h = T)
@@ -96,10 +96,17 @@ dashboardPage(
         fluidRow(
             tabBox(
                 id = "tabset2",
-                tabPanel("Drug info",
+                title = "DrugBank",
+                tabPanel("Drug targets",
                     tableOutput("infoDrug")),
-                tabPanel("GO annotations",
+                tabPanel("GO annotations targets",
                     dataTableOutput("GOannot")),
+                tabPanel("Description",
+                    htmlOutput("infoDrugDescription"), width = 12),
+                tabPanel("Pharmacodynamics",
+                    htmlOutput("infoDrugPharmacodynamic"), width = 12),
+                tabPanel("Indication",
+                    htmlOutput("infoDrugIndication"), width = 12),
             width = 12)
         ),
         fluidRow(
