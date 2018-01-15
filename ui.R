@@ -10,6 +10,8 @@ data <- data[!is.na(data$results.ROR),]
 
 all_drugs <- unique(data$results.drug)
 
+tags$style(".skin-blue .sidebar a { color: #444; }")
+
 dashboardPage(
     
     # Application title
@@ -19,16 +21,20 @@ dashboardPage(
     dashboardSidebar(
             selectInput(inputId = "result_name",
                 label = "Type of adverse reaction",
-                choices = c("anorexia",
+                choices = c("anaemia",
+                        "anorexia",
                 	"anxiety",
+                        "arthralgia",
                 	"attention",
                 	"dementia",
                 	"depression",
                 	"emotional",
                 	"mania",
                 	"memory",
+                        "nasopharyngitis",
                 	"panic_attack",
                 	"paranoia",
+                        "pneumonia",
                 	"psychotic",
                 	"suicide"),
                 selected = "memory",
@@ -46,12 +52,25 @@ dashboardPage(
                 selected = all_drugs[1],
                 multiple = FALSE,
                 selectize = TRUE, width = NULL, size = NULL),
+            downloadButton("downloadData","Download results"),
+            selectInput(inputId = "plotReference",
+                label = "Illustrations (p/OR) order",
+                choices = c("Indications",
+                    "Order p all",
+                    "Order p indication",
+                    "Order p age",
+                    "Order p female",
+                    "Order p male"),
+                selected = "Indications",
+                multiple = FALSE,
+                selectize = TRUE, width = NULL, size = NULL),
             sliderInput("range", "Range x-axis (ingredient):",
                   min = 1, max = nrow(data),
                   value = c(1,nrow(data))),
             sliderInput("rangeY", "Range y-axis (-log10(p)):",
                   min = -700, max = 700,
-                  value = c(-300,300))
+                  value = c(-300,300)),
+            tags$style(".skin-blue .sidebar a { color: #444; margin-left: 14px;")
         ),
     dashboardBody(
         fluidRow(
@@ -83,6 +102,8 @@ dashboardPage(
                         tableOutput("fishersTable")),
                     tabPanel("Logistic reg.",
                         tableOutput("logregResults"),
+                        downloadButton("downloadDataLog","Download results LogReg"),
+                        tags$style(".skin-blue .sidebar a { color: #444; margin-left: 14px;"),
                         background = "black"),
                 width = 12)
             ),

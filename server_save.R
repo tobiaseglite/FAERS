@@ -22,37 +22,13 @@ shinyServer(function(input, output, session) {
 
     newData_allCases <- reactive({
         #-------------------------- Read in sorted data for all cases
-        data <- read.table(paste0("data/results_",
+        read.table(paste0("data/results_",
                 input$result_name,"_sorted.txt"),
             stringsAsFactors = F,
             sep = "\t",
             h = T)
-        data <- data[!is.na(data$results.ROR),]
-        data
     })
     
-    newData_allCases_noNA <- reactive({
-        #-------------------------- Read in sorted data for all cases
-        data <- read.table(paste0("data/results_",
-                input$result_name,"_sorted.txt"),
-            stringsAsFactors = F,
-            sep = "\t",
-            h = T)
-        
-        data <- data[!is.na(data$results.ROR),]
-
-        for(i_col in grep(".pval",names(data), fixed = T)){
-            data[data[,i_col] == 0 & !is.na(data[,i_col]), i_col] <- exp(-500)
-            data[is.na(data[,i_col]),i_col] <- 1
-        }
-        
-        for(i_col in grep(".ROR",names(data), fixed = T)){
-            data[data[,i_col] == 0 & !is.na(data[,i_col]), i_col] <- 0.0000000000001
-            data[is.na(data[,i_col]),i_col] <- 1
-        }
-        data
-    })
-
     newRange <- reactive({
         #-------------------------- Get range from sliders
         range_out <- round(input$range)
@@ -79,8 +55,17 @@ shinyServer(function(input, output, session) {
     
     observe({
         if(!is.null(input$pvalPlot_click$x)){
-            data <- newData_allCases_noNA() # is sorted
+            data <- newData_allCases() # is sorted
             
+            for(i_col in grep(".pval",names(data), fixed = T)){
+                data[data[,i_col] == 0 & !is.na(data[,i_col]),i_col] <- exp(-500)
+                data[is.na(data[,i_col]),i_col] <- 1
+            }
+            
+            for(i_col in grep(".ROR",names(data), fixed = T)){
+                data[is.na(data[,i_col]),i_col] <- 1
+            }
+
             if(input$plotReference != "Indications"){
                 columnname_plot_use <- gsub("Order p ","",input$plotReference)
             
@@ -90,7 +75,7 @@ shinyServer(function(input, output, session) {
                     columnname_plot_use <- paste0("results_",columnname_plot_use)
                 }
                 
-                logPval_plot_use <- (-log10(data[,paste0(columnname_plot_use,".pval")])*ifelse(data[,paste0(columnname_plot_use,".ROR")] < 1,-1,1))
+                logPval_plot_use <- -log10(data[,paste0(columnname_plot_use,".pval")])*ifelse(data[,paste0(columnname_plot_use,".ROR")] < 1,-1,1)
                 order_use <- order(logPval_plot_use)
                 #order_use <- c(1:length(all_drugs))
             }else{
@@ -100,7 +85,16 @@ shinyServer(function(input, output, session) {
             updateSelectInput(session, inputId = "drug",
                 selected = all_drugs[order_use][round(input$pvalPlot_click$x)])
         }else if(!is.null(input$ORPlot_click$x)){
-            data <- newData_allCases_noNA() # is sorted
+            data <- newData_allCases() # is sorted
+
+            for(i_col in grep(".pval",names(data), fixed = T)){
+                data[data[,i_col] == 0 & !is.na(data[,i_col]),i_col] <- exp(-500)
+                data[is.na(data[,i_col]),i_col] <- 1
+            }
+
+            for(i_col in grep(".ROR",names(data), fixed = T)){
+                data[is.na(data[,i_col]),i_col] <- 1
+            }
 
             if(input$plotReference != "Indications"){
                 columnname_plot_use <- gsub("Order p ","",input$plotReference)
@@ -111,7 +105,7 @@ shinyServer(function(input, output, session) {
                     columnname_plot_use <- paste0("results_",columnname_plot_use)
                 }
 
-                logPval_plot_use <- (-log10(data[,paste0(columnname_plot_use,".pval")])*ifelse(data[,paste0(columnname_plot_use,".ROR")] < 1,-1,1))
+                logPval_plot_use <- -log10(data[,paste0(columnname_plot_use,".pval")])*ifelse(data[,paste0(columnname_plot_use,".ROR")] < 1,-1,1)
                 order_user <- order(logPval_plot_use)
                 #order_use <- c(1:length(all_drugs))
             }else{
@@ -181,7 +175,7 @@ shinyServer(function(input, output, session) {
             reac_print <- "pneumonia"
         }
         
-        data <- newData_allCases_noNA() # is sorted
+        data <- newData_allCases() # is sorted
 
         range_use <- newRange()
         
@@ -191,6 +185,18 @@ shinyServer(function(input, output, session) {
             columnname_use <- paste0("results_",input$type)
         }
         
+        for(i_col in grep(".pval",names(data), fixed = T)){
+            data[data[,i_col] == 0 & !is.na(data[,i_col]),i_col] <- exp(-500)
+            data[is.na(data[,i_col]),i_col] <- 1
+        }
+
+        for(i_col in grep(".ROR",names(data), fixed = T)){
+            data[is.na(data[,i_col]),i_col] <- 1
+        }
+
+        data[data[,paste0(columnname_use,".pval")] == 0,
+            paste0(columnname_use,".pval")] <- exp(-700)
+
         if(input$plotReference != "Indications"){
             columnname_plot_use <- gsub("Order p ","",input$plotReference)
 
@@ -204,6 +210,9 @@ shinyServer(function(input, output, session) {
             data <- data[order(logPval_plot_use),]
         }
 
+        data[data[,paste0(columnname_use,".ROR")] == 0,
+           paste0(columnname_use,".ROR")] <- 0.0000000000001
+                
         data[,paste0(columnname_use,".ROR")] <- log(data[,paste0(columnname_use,".ROR")])
         
         plot(data[,paste0(columnname_use,".ROR")],
@@ -250,7 +259,7 @@ shinyServer(function(input, output, session) {
     output$pvalPlot <- renderPlot({
         #-------------------------- Plot -log10(p) (y-axis) per active ingredient (x-axis)
         
-        data <- newData_allCases_noNA()
+        data <- newData_allCases()
         
         range_use <- newRange()
         rangeY_use <- newRangeY()
@@ -260,6 +269,18 @@ shinyServer(function(input, output, session) {
         }else{
             columnname_use <- paste0("results_",input$type)
         }
+        
+        for(i_col in grep(".pval",names(data), fixed = T)){
+            data[data[,i_col] == 0 & !is.na(data[,i_col]),i_col] <- exp(-500)
+            data[is.na(data[,i_col]),i_col] <- 1
+        }
+
+        for(i_col in grep(".ROR",names(data), fixed = T)){
+            data[is.na(data[,i_col]),i_col] <- 1
+        }
+
+        data[data[,paste0(columnname_use,".pval")] == 0,
+            paste0(columnname_use,".pval")] <- exp(-700)
         
         if(input$plotReference != "Indications"){
             columnname_plot_use <- gsub("Order p ","",input$plotReference)
