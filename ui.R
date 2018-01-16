@@ -8,6 +8,14 @@ data <- read.table(paste0("data/results_memory_sorted.txt"),
 
 data <- data[!is.na(data$results.ROR),]
 
+load("data/drugbank_list_processedList.RData")
+
+all_genes <- sort(unique(unlist(sapply(info_list,function(x){
+   unique(c(x$targets$target_gene, x$targets$target_synonyms,x$targets$name))
+}))))
+
+all_genes <- all_genes[!all_genes %in% c("","\n    ","1.-.-.-")]
+
 all_drugs <- unique(data$results.drug)
 
 tags$style(".skin-blue .sidebar a { color: #444; }")
@@ -105,7 +113,8 @@ dashboardPage(
                         downloadButton("downloadDataLog","Download results LogReg"),
                         tags$style(".skin-blue .sidebar a { color: #444; margin-left: 14px;"),
                         background = "black"),
-                width = 12)
+                    width = 12,
+                    selected = "Fisher's Exact Test")
             ),
             column(6,box(title = "log(Odds ratios)",
                 width = "500px",
@@ -133,19 +142,43 @@ dashboardPage(
         fluidRow(
             box(title = "The drugnames assigned to the active ingredient",
                 dataTableOutput("drugActiveIngredients"),
-                width = 12
+                width = 12,
+                solidHeader = T,
+                collapsible = TRUE,
+                collapsed = T
             )
         ),
         fluidRow(
             box(title = "The 10 most frequent indications for the active ingredient",
                 dataTableOutput("drugIndications"),
-                width = 12
+                width = 12,
+                solidHeader = T,
+                collapsible = TRUE,
+                collapsed = T
             )
         ),
         fluidRow(
             box(title = "The 10 most frequent active ingredients administered for the most frequent indication",
                 dataTableOutput("topIndicationsDrug"),
-                width = 12
+                width = 12,
+                solidHeader = T,
+                collapsible = TRUE,
+                collapsed = T
+            )
+        ),
+        fluidRow(
+            box(title = "Search for ingredients with a chosen target gene",
+                selectInput(inputId = "selectGene",
+                    label = "Target gene (DrugBank)",
+                    choices = all_genes,
+                    selected = sample(all_genes,1),
+                    multiple = FALSE,
+                    selectize = TRUE, width = NULL, size = NULL),
+                dataTableOutput("targetGenes"),
+                width = 12,
+                solidHeader = T,
+                collapsible = TRUE,
+                collapsed = T
             )
         )
     )

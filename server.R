@@ -18,6 +18,12 @@ all_drugs <- unique(data$results.drug)
 load("data/assignments_list.RData")
 load("data/drugbank_list_processedList.RData")
 
+all_genes <- sort(unique(unlist(sapply(info_list,function(x){
+   unique(c(x$targets$target_gene, x$targets$target_synonyms, x$targets$name))
+}))))
+
+all_genes <- all_genes[!all_genes %in% c("","\n    ","1.-.-.-")]
+
 shinyServer(function(input, output, session) {
 
     newData_allCases <- reactive({
@@ -79,8 +85,11 @@ shinyServer(function(input, output, session) {
     
     observe({
         if(!is.null(input$pvalPlot_click$x)){
+            click_use <- round(input$pvalPlot_click$x)
+            click_use <- ifelse(click_use < 1,1, click_use)
+
             data <- newData_allCases_noNA() # is sorted
-            
+ 
             if(input$plotReference != "Indications"){
                 columnname_plot_use <- gsub("Order p ","",input$plotReference)
             
@@ -98,8 +107,11 @@ shinyServer(function(input, output, session) {
             }
 
             updateSelectInput(session, inputId = "drug",
-                selected = all_drugs[order_use][round(input$pvalPlot_click$x)])
+                selected = all_drugs[order_use][click_use])
         }else if(!is.null(input$ORPlot_click$x)){
+            click_use <- round(input$ORPlot_click$x)
+            click_use <- ifelse(click_use < 1, 1, click_use)
+            
             data <- newData_allCases_noNA() # is sorted
 
             if(input$plotReference != "Indications"){
@@ -118,7 +130,7 @@ shinyServer(function(input, output, session) {
                 order_use <- c(1:length(all_drugs))
             }
             updateSelectInput(session, inputId = "drug",
-                selected = all_drugs[order_use][round(input$ORPlot_click$x)])
+                selected = all_drugs[order_use][click_use])
         }
     })
     
@@ -435,7 +447,8 @@ shinyServer(function(input, output, session) {
         CI_low <- data_drug[,paste0(columnname_use,".CI_low")]
         CI_up <- data_drug[,paste0(columnname_use,".CI_up")]
         CI <- paste0(CI_low,"-",CI_up)
-        
+        log_OR <- ifelse(OR == 0, log(0.0000000000001), log(OR))
+
         pval <- sapply(c(pval),function(x){
             if(x > 0.01){
                 return(as.character(round(x,2)))
@@ -448,10 +461,10 @@ shinyServer(function(input, output, session) {
             }
         })
 
-        data_mat <- matrix(c(OR,CI,pval),ncol = 1)
+        data_mat <- matrix(c(OR,CI,round(log_OR,2),pval),ncol = 1)
         
         colnames(data_mat) <- c("value")
-        rownames(data_mat) <- c("OR","95% CI","p")
+        rownames(data_mat) <- c("OR","95% CI","log(OR)","p")
         data_mat
     },
     include.rownames = T)
@@ -649,6 +662,75 @@ shinyServer(function(input, output, session) {
         }
     })
     
+    output$targetGenes <- renderDataTable({
+        if(input$selectGene %in% all_genes){
+            target_ind <- sapply(info_list,function(x){
+                targets_tmp <- unique(c(x$targets$target_gene, x$targets$target_synonyms, x$targets$name))
+                input$selectGene %in% targets_tmp
+            })
+            
+            names_targets <- names(info_list)[target_ind]
+
+            data <- newData_allCases_noNA()
+
+            result_list <- lapply(names_targets,function(x){
+                df_tmp <- data[grepl(x,data$results.drug,ignore.case = T, fixed = T),c("results.drug",
+                    "results.ROR",
+                    "results.CI_low",
+                    "results.CI_up",
+                    "results.pval",
+                    "results_indication.indication",
+                    "results_indication.ROR",
+                    "results_indication.CI_low",
+                    "results_indication.CI_up",
+                    "results_indication.pval")]
+                if(nrow(df_tmp) != 0){
+                    df_tmp <- as.data.frame(cbind(rep(x, nrow(df_tmp)),df_tmp),stringsAsFactors = F)
+                }else{
+                    df_tmp <- data.frame(x,"","","","","","","","","","")
+                }
+
+                for(i in c(3:5,8:10)){
+                    df_tmp[,i] <- round(as.numeric(df_tmp[,i]),2)
+                }
+
+                for(i in c(6,11)){
+                    df_tmp[,i] <- signif(as.numeric(df_tmp[,i]),2)
+                }
+
+                names(df_tmp) <- c("Ingr. DB",
+                    "Ingr. FAERS",
+                    "OR all",
+                    "CI low all",
+                    "CI up all",
+                    "p all",
+                    "indication",
+                    "OR ind",
+                    "CI low ind",
+                    "CI up ind",
+                    "p ind")
+                df_tmp
+            })
+
+            do.call("rbind",result_list)
+        }else{
+            df_tmp <- data.frame(x,"","","","","","","","","","")
+            names(df_tmp) <- c("Ingr. DB",
+                "Ingr. FAERS",
+                "OR all",
+                "CI low all",
+                "CI up all",
+                "p all",
+                "indication",
+                "OR ind",
+                "CI low ind",
+                "CI up ind",
+                "p ind")
+            df_tmp
+        }
+    })
+
+
     output$downloadData <- downloadHandler(
         filename = function(){
             paste0(input$result_name,"_",
