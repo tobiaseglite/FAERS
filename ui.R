@@ -126,7 +126,7 @@ dashboardPage(
         fluidRow(
             tabBox(
                 id = "tabset2",
-                title = "DrugBank",
+                title = "www.DrugBank.ca",
                 tabPanel("Drug targets",
                     tableOutput("infoDrug")),
                 tabPanel("GO annotations targets",

@@ -89,7 +89,9 @@ shinyServer(function(input, output, session) {
             click_use <- ifelse(click_use < 1,1, click_use)
 
             data <- newData_allCases_noNA() # is sorted
- 
+            
+            click_use <- ifelse(click_use > nrow(data),nrow(data), click_use)
+
             if(input$plotReference != "Indications"){
                 columnname_plot_use <- gsub("Order p ","",input$plotReference)
             
@@ -113,6 +115,8 @@ shinyServer(function(input, output, session) {
             click_use <- ifelse(click_use < 1, 1, click_use)
             
             data <- newData_allCases_noNA() # is sorted
+
+            click_use <- ifelse(click_use > nrow(data),nrow(data), click_use)
 
             if(input$plotReference != "Indications"){
                 columnname_plot_use <- gsub("Order p ","",input$plotReference)
